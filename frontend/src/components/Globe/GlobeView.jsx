@@ -1,11 +1,11 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { useGlobeStore } from '../../stores/globeStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useGeoLocation } from '../../hooks/useGeoLocation'
-import { fetchReports } from '../../api/reports'
+import { fetchReports, fetchHeatmap } from '../../api/reports'
 import { fetchEvents } from '../../api/events'
 import { geoJSONToCoords, mapZoomToRadiusKm } from '../../utils/geo'
 
@@ -62,21 +62,34 @@ export function GlobeView({ onReportClick, onEventClick }) {
   const [viewState, setViewState] = useState({ lat: 20, lng: 0, zoom: 2 })
   const radiusKm = mapZoomToRadiusKm(viewState.zoom)
 
-  // Round coords to avoid re-fetching on tiny pans
-  const fetchLat = Math.round(viewState.lat * 5) / 5
-  const fetchLng = Math.round(viewState.lng * 5) / 5
-  const fetchRadius = Math.max(10, Math.round(radiusKm / 10) * 10)
+  // Round coords to a coarse grid to avoid re-fetching on tiny pans.
+  // Fetch 1.5× the visible radius as a buffer so edges don't go empty mid-pan.
+  const fetchLat    = Math.round(viewState.lat * 5) / 5
+  const fetchLng    = Math.round(viewState.lng * 5) / 5
+  const fetchRadius = Math.max(10, Math.round((radiusKm * 1.5) / 10) * 10)
 
   const { data: reports = [] } = useQuery({
     queryKey: ['reports', fetchLat, fetchLng, fetchRadius],
     queryFn: () => fetchReports({ lat: fetchLat, lng: fetchLng, radius_km: fetchRadius, status: 'active' }),
-    staleTime: 30000,
+    staleTime: 120000,
+    gcTime: 300000,
+    placeholderData: keepPreviousData,
   })
 
   const { data: events = [] } = useQuery({
     queryKey: ['events', fetchLat, fetchLng, fetchRadius],
     queryFn: () => fetchEvents({ lat: fetchLat, lng: fetchLng, radius_km: fetchRadius }),
-    staleTime: 30000,
+    staleTime: 120000,
+    gcTime: 300000,
+    placeholderData: keepPreviousData,
+  })
+
+  const { data: heatmapPoints = [] } = useQuery({
+    queryKey: ['heatmap', fetchLat, fetchLng, fetchRadius],
+    queryFn: () => fetchHeatmap({ lat: fetchLat, lng: fetchLng, radius_km: fetchRadius }),
+    staleTime: 120000,
+    gcTime: 300000,
+    placeholderData: keepPreviousData,
   })
 
   // Keep reports in a ref so click handlers always have fresh data
@@ -152,6 +165,38 @@ export function GlobeView({ onReportClick, onEventClick }) {
           },
         },
         firstSymbolId,
+      )
+
+      // ── Pollution heatmap ──────────────────────────────────────────────
+      map.addSource('heatmap-data', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      })
+      map.addLayer(
+        {
+          id: 'pollution-heatmap',
+          type: 'heatmap',
+          source: 'heatmap-data',
+          paint: {
+            'heatmap-weight': ['interpolate', ['linear'], ['get', 'weight'], 0, 0, 3, 0.5, 6, 1],
+            'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 2, 0.4, 8, 1.2, 12, 2.0],
+            'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 2, 20, 8, 35, 12, 60],
+            'heatmap-color': [
+              'interpolate', ['linear'], ['heatmap-density'],
+              0,   'rgba(0,0,0,0)',
+              0.1, 'rgba(0,230,200,0.2)',
+              0.3, 'rgba(64,224,208,0.6)',
+              0.5, 'rgba(249,199,79,0.75)',
+              0.7, 'rgba(248,150,30,0.85)',
+              1.0, 'rgba(249,65,68,0.95)',
+            ],
+            'heatmap-opacity': [
+              'interpolate', ['linear'], ['zoom'],
+              7, 0.85, 11, 0.55, 13, 0.30, 15, 0,
+            ],
+          },
+        },
+        'cluster-halo',
       )
 
       // ── Reports GeoJSON source (with clustering) ───────────────────────
@@ -353,6 +398,20 @@ export function GlobeView({ onReportClick, onEventClick }) {
     }))
     source.setData({ type: 'FeatureCollection', features })
   }, [reports, mapReady])
+
+  // ── Sync heatmap data ─────────────────────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !mapReady) return
+    const source = map.getSource('heatmap-data')
+    if (!source) return
+    const features = heatmapPoints.map((p) => ({
+      type: 'Feature',
+      geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+      properties: { weight: p.weight },
+    }))
+    source.setData({ type: 'FeatureCollection', features })
+  }, [heatmapPoints, mapReady])
 
   // ── Sync event markers ─────────────────────────────────────────────────
   useEffect(() => {
