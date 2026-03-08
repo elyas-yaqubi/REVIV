@@ -5,24 +5,16 @@ import { Modal } from '../components/UI/Modal'
 import { ReportForm } from '../components/Reports/ReportForm'
 import { EventForm } from '../components/Events/EventForm'
 import { Nav } from '../components/UI/Nav'
-import { useGlobeStore } from '../stores/globeStore'
+import { Sidebar } from '../components/Sidebar/Sidebar'
+import { MissionOverlay } from '../components/UI/MissionOverlay'
 import { geoJSONToCoords } from '../utils/geo'
 
 export default function HomePage() {
-  const { setSelectedMarker, openPanel } = useGlobeStore()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [reportModalOpen, setReportModalOpen] = useState(false)
   const [eventModalOpen, setEventModalOpen] = useState(false)
+  const [missionOpen, setMissionOpen] = useState(false)
   const [linkedReport, setLinkedReport] = useState(null)
-
-  const handleReportClick = (report) => {
-    setSelectedMarker({ ...report, type: 'report' })
-    openPanel()
-  }
-
-  const handleEventClick = (event) => {
-    setSelectedMarker({ ...event, type: 'event' })
-    openPanel()
-  }
 
   const handleCreateEventFromReport = (report) => {
     setLinkedReport(report)
@@ -32,30 +24,29 @@ export default function HomePage() {
   const reportCoords = linkedReport ? geoJSONToCoords(linkedReport.location) : null
 
   return (
-    <div className="w-screen h-screen bg-brand-blue overflow-hidden relative">
-      <Nav />
+    <div className="w-screen h-screen bg-black overflow-hidden relative">
+      <Nav
+        onProfileClick={() => setSidebarOpen(v => !v)}
+        sidebarOpen={sidebarOpen}
+        onCreateEvent={() => setEventModalOpen(true)}
+        onReport={() => setReportModalOpen(true)}
+        onMission={() => setMissionOpen(true)}
+      />
 
       <div className="w-full h-full">
-        <GlobeView onReportClick={handleReportClick} onEventClick={handleEventClick} />
+        <GlobeView />
       </div>
 
       <DetailPanel onCreateEvent={handleCreateEventFromReport} />
 
-      {/* Floating action buttons */}
-      <div className="fixed bottom-12 right-6 flex flex-col gap-3 z-40">
-        <button
-          onClick={() => setEventModalOpen(true)}
-          className="bg-brand-teal hover:bg-brand-green text-white font-semibold px-4 py-2 rounded-full shadow-lg transition-colors text-sm"
-        >
-          + Event
-        </button>
-        <button
-          onClick={() => setReportModalOpen(true)}
-          className="bg-red-500 hover:bg-red-600 text-white font-semibold px-4 py-2 rounded-full shadow-lg transition-colors text-sm"
-        >
-          + Report
-        </button>
-      </div>
+      <MissionOverlay open={missionOpen} onClose={() => setMissionOpen(false)} />
+
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onReport={() => setReportModalOpen(true)}
+        onCreateEvent={() => setEventModalOpen(true)}
+      />
 
       <Modal open={reportModalOpen} onClose={() => setReportModalOpen(false)} title="Submit Litter Report">
         <ReportForm onSuccess={() => setReportModalOpen(false)} />

@@ -1,15 +1,13 @@
-import uuid
-import os
+import base64
 from fastapi import HTTPException, UploadFile
-
-from app.core.config import settings
 
 ALLOWED_MIME = {"image/jpeg", "image/png", "image/webp"}
 MAX_SIZE = 5 * 1024 * 1024  # 5MB
-EXT_MAP = {"image/jpeg": "jpg", "image/png": "png", "image/webp": "webp"}
 
 
 async def save_file(file: UploadFile, resource_type: str) -> str:
+    """Store the file as a base64 data URI so it travels with the MongoDB document
+    and works across all environments without shared filesystem storage."""
     content_type = file.content_type
     if content_type not in ALLOWED_MIME:
         raise HTTPException(status_code=400, detail=f"Invalid file type: {content_type}")
@@ -18,13 +16,5 @@ async def save_file(file: UploadFile, resource_type: str) -> str:
     if len(data) > MAX_SIZE:
         raise HTTPException(status_code=400, detail="File exceeds 5MB limit")
 
-    ext = EXT_MAP[content_type]
-    filename = f"{uuid.uuid4().hex}.{ext}"
-    dir_path = os.path.join(settings.UPLOAD_DIR, resource_type)
-    os.makedirs(dir_path, exist_ok=True)
-    file_path = os.path.join(dir_path, filename)
-
-    with open(file_path, "wb") as f:
-        f.write(data)
-
-    return f"/uploads/{resource_type}/{filename}"
+    encoded = base64.b64encode(data).decode("utf-8")
+    return f"data:{content_type};base64,{encoded}"
