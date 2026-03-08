@@ -9,7 +9,7 @@ NUM_CLASSES = len(SEVERITY_LABELS)
 IMG_SIZE = 224
 IMAGENET_MEAN = [0.485, 0.456, 0.406]
 IMAGENET_STD = [0.229, 0.224, 0.225]
-TTA_N = 8
+TTA_N = 1
 
 _model: nn.Module | None = None
 _device: torch.device | None = None
