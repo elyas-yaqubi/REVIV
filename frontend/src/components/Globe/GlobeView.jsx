@@ -83,6 +83,9 @@ function buildReportPopupHTML(report) {
         ).join('')}
        </div>`
     : ''
+  const createEventBtn = report.status !== 'resolved'
+    ? `<button data-create-event style="margin-top:8px;width:100%;padding:5px 0;border-radius:6px;border:1px solid rgba(82,183,136,0.5);background:rgba(82,183,136,0.12);color:#52b788;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.04em;">+ Create Cleanup Event</button>`
+    : ''
   return `
     <div class="reviv-popup-inner">
       ${photos}
@@ -96,6 +99,7 @@ function buildReportPopupHTML(report) {
         <span class="reviv-popup-upvotes">▲ ${report.upvote_count ?? 0} upvotes</span>
         <span>${report.status === 'resolved' ? '✓ Resolved' : '● Active'}</span>
       </div>
+      ${createEventBtn}
     </div>`
 }
 
@@ -123,7 +127,7 @@ function buildEventPopupHTML(event) {
     </div>`
 }
 
-export function GlobeView() {
+export function GlobeView({ onCreateEvent }) {
   const containerRef = useRef(null)
   const starsCanvasRef = useRef(null)
   const mapRef = useRef(null)
@@ -131,6 +135,8 @@ export function GlobeView() {
   const userMarkerRef = useRef(null)
   const reportsRef = useRef([])
   const debounceRef = useRef(null)
+  const onCreateEventRef = useRef(onCreateEvent)
+  useEffect(() => { onCreateEventRef.current = onCreateEvent }, [onCreateEvent])
   const [mapReady, setMapReady] = useState(false)
 
   const { location } = useGeoLocation()
@@ -478,10 +484,17 @@ export function GlobeView() {
         const report = reportsRef.current.find((r) => r.id === id)
         if (!report) return
         const coords = e.features[0].geometry.coordinates.slice()
-        new maplibregl.Popup({ closeOnClick: true, maxWidth: '300px', className: 'reviv-popup', offset: 12 })
+        const popup = new maplibregl.Popup({ closeOnClick: true, maxWidth: '300px', className: 'reviv-popup', offset: 12 })
           .setLngLat(coords)
           .setHTML(buildReportPopupHTML(report))
           .addTo(map)
+        const btn = popup.getElement()?.querySelector('[data-create-event]')
+        if (btn) {
+          btn.addEventListener('click', () => {
+            popup.remove()
+            onCreateEventRef.current?.(report)
+          })
+        }
       })
 
       // ── Cursor changes ─────────────────────────────────────────────────

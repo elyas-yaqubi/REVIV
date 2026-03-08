@@ -34,7 +34,7 @@ export default function HomePage() {
       />
 
       <div className="w-full h-full">
-        <GlobeView />
+        <GlobeView onCreateEvent={handleCreateEventFromReport} />
       </div>
 
       <DetailPanel onCreateEvent={handleCreateEventFromReport} />
