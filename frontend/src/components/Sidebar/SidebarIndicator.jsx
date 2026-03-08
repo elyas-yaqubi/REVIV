@@ -7,7 +7,7 @@ export function SidebarIndicator({ page, onPageChange }) {
       <button
         onClick={() => onPageChange(0)}
         disabled={page === 0}
-        className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+        className="flex items-center gap-1.5 text-xs font-medium text-white disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
         aria-label="Previous page"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
@@ -39,7 +39,7 @@ export function SidebarIndicator({ page, onPageChange }) {
       <button
         onClick={() => onPageChange(1)}
         disabled={page === 1}
-        className="flex items-center gap-1.5 text-xs font-medium text-gray-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+        className="flex items-center gap-1.5 text-xs font-medium text-white disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
         aria-label="Next page"
       >
         <span className="hidden sm:inline">Stats</span>

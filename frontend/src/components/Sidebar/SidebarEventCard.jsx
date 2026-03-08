@@ -15,7 +15,8 @@ const STATUS_DOT = {
 
 function formatDistance(km) {
   if (km == null) return null
-  return km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`
+  const miles = km * 0.621371
+  return miles < 0.1 ? `${Math.round(miles * 5280)} ft` : `${miles.toFixed(1)} mi`
 }
 
 export function SidebarEventCard({ event, distanceKm }) {
