@@ -1,12 +1,13 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
-import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { useRef, useEffect, useState } from 'react'
+import { useQuery, useQueryClient, keepPreviousData } from '@tanstack/react-query'
 import maplibregl from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
+import toast from 'react-hot-toast'
 import { useGlobeStore } from '../../stores/globeStore'
 import { useAuthStore } from '../../stores/authStore'
 import { useGeoLocation } from '../../hooks/useGeoLocation'
 import { fetchReports, fetchHeatmap } from '../../api/reports'
-import { fetchEvents } from '../../api/events'
+import { fetchEvents, joinEvent, leaveEvent } from '../../api/events'
 import { geoJSONToCoords, mapZoomToRadiusKm } from '../../utils/geo'
 
 const MAP_STYLE = 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
@@ -103,7 +104,7 @@ function buildReportPopupHTML(report) {
     </div>`
 }
 
-function buildEventPopupHTML(event) {
+function buildEventPopupHTML(event, userId) {
   const color = EVENT_STATUS_COLORS[event.status] || '#52b788'
   const statusLabel = escapeHtml((event.status || '').replace(/_/g, ' '))
   const desc = event.description
@@ -111,6 +112,17 @@ function buildEventPopupHTML(event) {
     : ''
   const dt = escapeHtml(formatDT(event.date_time))
   const attendees = event.attendee_count ?? event.attendee_ids?.length ?? 0
+
+  const isAttending = userId && (event.attendee_ids?.includes(userId) || event.waitlist_ids?.includes(userId))
+  const canJoin = ['open', 'full'].includes(event.status)
+  let actionBtn = ''
+  if (isAttending) {
+    actionBtn = `<button data-event-action="leave" style="margin-top:8px;width:100%;padding:5px 0;border-radius:6px;border:1px solid rgba(249,65,68,0.5);background:rgba(249,65,68,0.1);color:#f94144;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.04em;">Leave Event</button>`
+  } else if (canJoin) {
+    const label = event.status === 'full' ? '+ Join Waitlist' : '+ Join Event'
+    actionBtn = `<button data-event-action="join" style="margin-top:8px;width:100%;padding:5px 0;border-radius:6px;border:1px solid rgba(82,183,136,0.5);background:rgba(82,183,136,0.12);color:#52b788;font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.04em;">${label}</button>`
+  }
+
   return `
     <div class="reviv-popup-inner">
       <div class="reviv-popup-badges">
@@ -124,6 +136,7 @@ function buildEventPopupHTML(event) {
         <span class="reviv-popup-attendees">👥 ${attendees} volunteer${attendees !== 1 ? 's' : ''}</span>
         ${event.max_volunteers ? `<span>/ ${event.max_volunteers} max</span>` : ''}
       </div>
+      ${actionBtn}
     </div>`
 }
 
@@ -142,6 +155,9 @@ export function GlobeView({ onCreateEvent }) {
   const { location } = useGeoLocation()
   const { setViewport } = useGlobeStore()
   const user = useAuthStore((s) => s.user)
+  const userRef = useRef(user)
+  useEffect(() => { userRef.current = user }, [user])
+  const queryClient = useQueryClient()
 
   const [viewState, setViewState] = useState({ lat: 20, lng: 0, zoom: 2 })
   const radiusKm = mapZoomToRadiusKm(viewState.zoom)
@@ -625,10 +641,31 @@ export function GlobeView({ onCreateEvent }) {
         </svg>`
       el.addEventListener('click', (e) => {
         e.stopPropagation()
-        new maplibregl.Popup({ closeOnClick: true, maxWidth: '300px', className: 'reviv-popup', offset: [0, -36] })
+        const popup = new maplibregl.Popup({ closeOnClick: true, maxWidth: '300px', className: 'reviv-popup', offset: [0, -36] })
           .setLngLat([coords.lng, coords.lat])
-          .setHTML(buildEventPopupHTML(event))
+          .setHTML(buildEventPopupHTML(event, userRef.current?.id))
           .addTo(map)
+        const btn = popup.getElement()?.querySelector('[data-event-action]')
+        if (btn) {
+          btn.addEventListener('click', async () => {
+            const action = btn.dataset.eventAction
+            btn.disabled = true
+            try {
+              if (action === 'join') {
+                await joinEvent(event.id)
+                toast.success('Joined event!')
+              } else {
+                await leaveEvent(event.id)
+                toast.success('Left event.')
+              }
+              queryClient.invalidateQueries({ queryKey: ['events'] })
+              popup.remove()
+            } catch {
+              toast.error('Something went wrong.')
+              btn.disabled = false
+            }
+          })
+        }
       })
 
       const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
