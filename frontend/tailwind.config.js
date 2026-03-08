@@ -3,6 +3,9 @@ export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
+      zIndex: {
+        '60': '60',
+      },
       colors: {
         'brand-green': '#2d6a4f',
         'brand-teal': '#52b788',

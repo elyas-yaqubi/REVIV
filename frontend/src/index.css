@@ -10,7 +10,152 @@
 
 body {
   font-family: Inter, system-ui, sans-serif;
-  background-color: #1d3557;
+  background-color: #000000;
   color: white;
   -webkit-font-smoothing: antialiased;
+}
+
+/* ── REVIV map popup bubble ──────────────────────────────────────────────── */
+.reviv-popup .maplibregl-popup-content {
+  background: rgba(11, 18, 32, 0.97);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
+  color: white;
+  font-family: Inter, system-ui, sans-serif;
+  overflow: hidden;
+  max-width: 280px;
+  min-width: 220px;
+}
+
+.reviv-popup .maplibregl-popup-tip {
+  border-top-color: rgba(11, 18, 32, 0.97);
+}
+
+.reviv-popup .maplibregl-popup-close-button {
+  color: rgba(156, 163, 175, 0.8);
+  font-size: 18px;
+  line-height: 1;
+  padding: 6px 10px;
+  top: 0;
+  right: 0;
+  border-radius: 0 12px 0 0;
+  background: transparent;
+  transition: color 0.15s;
+}
+
+.reviv-popup .maplibregl-popup-close-button:hover {
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.reviv-popup-inner {
+  padding: 14px 16px 14px;
+}
+
+.reviv-popup-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.reviv-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: capitalize;
+  border: 1px solid;
+}
+
+.reviv-badge-low    { color: #f9c74f; border-color: rgba(249,199,79,0.3);  background: rgba(249,199,79,0.1); }
+.reviv-badge-medium { color: #f8961e; border-color: rgba(248,150,30,0.3);  background: rgba(248,150,30,0.1); }
+.reviv-badge-high   { color: #f94144; border-color: rgba(249,65,68,0.3);   background: rgba(249,65,68,0.1);  }
+.reviv-badge-open        { color: #52b788; border-color: rgba(82,183,136,0.3);  background: rgba(82,183,136,0.1); }
+.reviv-badge-in_progress { color: #4cc9f0; border-color: rgba(76,201,240,0.3);  background: rgba(76,201,240,0.1); }
+.reviv-badge-full        { color: #f8961e; border-color: rgba(248,150,30,0.3);  background: rgba(248,150,30,0.1); }
+.reviv-badge-completed   { color: #a855f7; border-color: rgba(168,85,247,0.3);  background: rgba(168,85,247,0.1); }
+.reviv-badge-resolved    { color: #9ca3af; border-color: rgba(156,163,175,0.3); background: rgba(156,163,175,0.1); }
+.reviv-badge-category    { color: #9ca3af; border-color: rgba(156,163,175,0.2); background: rgba(156,163,175,0.07); }
+
+.reviv-popup-location {
+  font-size: 12px;
+  font-weight: 600;
+  color: #52b788;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.reviv-popup-meta {
+  font-size: 11px;
+  color: rgba(156, 163, 175, 0.8);
+  margin-bottom: 8px;
+}
+
+.reviv-popup-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.reviv-popup-desc {
+  font-size: 12px;
+  color: rgba(209, 213, 219, 0.85);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.reviv-popup-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 11px;
+  color: rgba(156, 163, 175, 0.7);
+}
+
+.reviv-popup-upvotes {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: rgba(156, 163, 175, 0.7);
+}
+
+.reviv-popup-attendees {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reviv-popup-photos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.reviv-popup-photo {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
 }
