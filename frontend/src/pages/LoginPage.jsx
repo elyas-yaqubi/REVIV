@@ -1,19 +1,30 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { SplashScreen } from '../components/Auth/SplashScreen'
 import { LoginForm } from '../components/Auth/LoginForm'
 
 const HELVETICA = "'Helvetica Neue', Helvetica, Arial, sans-serif"
 
 export default function LoginPage() {
-  const [splashDone, setSplashDone] = useState(false)
+  const alreadySeen = !!sessionStorage.getItem('splashShown')
+  const [splashDone, setSplashDone] = useState(alreadySeen)
   const [contentVisible, setContentVisible] = useState(false)
 
   const handleSplashComplete = useCallback(() => {
+    sessionStorage.setItem('splashShown', '1')
     setSplashDone(true)
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setContentVisible(true))
     })
   }, [])
+
+  // Skip splash on return visits — slide in from left
+  useEffect(() => {
+    if (alreadySeen) {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setContentVisible(true))
+      })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div
@@ -25,7 +36,11 @@ export default function LoginPage() {
       {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
 
       <div
-        style={{ opacity: contentVisible ? 1 : 0, transition: 'opacity 0.7s ease-in-out' }}
+        style={{
+          opacity: contentVisible ? 1 : 0,
+          transform: contentVisible ? 'translateX(0)' : alreadySeen ? 'translateX(-48px)' : 'translateX(0)',
+          transition: 'opacity 0.65s ease, transform 0.65s ease',
+        }}
         className="relative flex flex-col items-center px-4 pt-6 pb-10"
       >
         {/* Logo — cropped container hides SVG whitespace */}

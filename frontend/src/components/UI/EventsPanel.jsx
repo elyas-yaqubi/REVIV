@@ -65,7 +65,7 @@ function EventRow({ event, distanceKm }) {
   )
 }
 
-export function EventsPanel({ open, onClose }) {
+export function EventsPanel({ open, onClose, leftSide = false }) {
   const panelRef = useRef(null)
   const [filter, setFilter] = useState('all')
   const [sort, setSort] = useState('date')  // 'date' | 'nearest'
@@ -134,7 +134,7 @@ export function EventsPanel({ open, onClose }) {
   return (
     <div
       ref={panelRef}
-      className={`absolute top-full right-0 mt-2 w-80 md:w-[26rem] rounded-xl border border-white/10 bg-[#0d1627] backdrop-blur-lg shadow-2xl shadow-black/60 overflow-hidden z-50 transition-all duration-200 origin-top-right ${
+      className={`${leftSide ? 'absolute top-0 left-full ml-3 origin-top-left' : 'absolute top-full right-0 mt-2 origin-top-right'} w-80 md:w-[26rem] rounded-xl border border-white/10 bg-[#0d1627] backdrop-blur-lg shadow-2xl shadow-black/60 overflow-hidden z-50 transition-all duration-200 ${
         open ? 'opacity-100 scale-100 pointer-events-auto' : 'opacity-0 scale-95 pointer-events-none'
       }`}
     >

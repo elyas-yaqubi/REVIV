@@ -46,7 +46,74 @@ const EVENT_STATUS_COLORS = {
   resolved: '#6b7280',
 }
 
-export function GlobeView({ onReportClick, onEventClick }) {
+const SEVERITY_COLORS = { low: '#f9c74f', medium: '#f8961e', high: '#f94144' }
+
+function formatCat(cat) { return (cat || '').replace(/_/g, ' ') }
+
+function formatDT(dt) {
+  if (!dt) return ''
+  try {
+    return new Date(dt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+  } catch { return '' }
+}
+
+function buildReportPopupHTML(report) {
+  const sevColor = SEVERITY_COLORS[report.severity] || '#f9c74f'
+  const cat = formatCat(report.category)
+  const desc = report.description
+    ? `<p class="reviv-popup-desc">${report.description}</p>`
+    : ''
+  const viewable = (report.photo_urls ?? []).filter((url) =>
+    url && (url.startsWith('data:image/') || /\.(jpe?g|png|webp|gif|avif)(\?.*)?$/i.test(url))
+  )
+  const photos = viewable.length > 0
+    ? `<div class="reviv-popup-photos">
+        ${viewable.slice(0, 2).map((url) =>
+          `<img src="${url}" alt="Report photo" class="reviv-popup-photo" onerror="this.style.display='none'" />`
+        ).join('')}
+       </div>`
+    : ''
+  return `
+    <div class="reviv-popup-inner">
+      ${photos}
+      <div class="reviv-popup-badges">
+        <span class="reviv-badge reviv-badge-${report.severity}" style="color:${sevColor}">${report.severity || 'low'}</span>
+        ${cat ? `<span class="reviv-badge reviv-badge-category">${cat}</span>` : ''}
+      </div>
+      ${report.location_label ? `<p class="reviv-popup-location">${report.location_label}</p>` : ''}
+      ${desc}
+      <div class="reviv-popup-footer">
+        <span class="reviv-popup-upvotes">▲ ${report.upvote_count ?? 0} upvotes</span>
+        <span>${report.status === 'resolved' ? '✓ Resolved' : '● Active'}</span>
+      </div>
+    </div>`
+}
+
+function buildEventPopupHTML(event) {
+  const color = EVENT_STATUS_COLORS[event.status] || '#52b788'
+  const statusLabel = (event.status || '').replace(/_/g, ' ')
+  const desc = event.description
+    ? `<p class="reviv-popup-desc">${event.description}</p>`
+    : ''
+  const dt = formatDT(event.date_time)
+  const attendees = event.attendee_count ?? event.attendee_ids?.length ?? 0
+  return `
+    <div class="reviv-popup-inner">
+      <div class="reviv-popup-badges">
+        <span class="reviv-badge reviv-badge-${event.status}" style="color:${color}">${statusLabel}</span>
+      </div>
+      <p class="reviv-popup-title">${event.name || 'Cleanup Event'}</p>
+      ${event.location_label ? `<p class="reviv-popup-location">${event.location_label}</p>` : ''}
+      ${dt ? `<p class="reviv-popup-meta">${dt}</p>` : ''}
+      ${desc}
+      <div class="reviv-popup-footer">
+        <span class="reviv-popup-attendees">👥 ${attendees} volunteer${attendees !== 1 ? 's' : ''}</span>
+        ${event.max_volunteers ? `<span>/ ${event.max_volunteers} max</span>` : ''}
+      </div>
+    </div>`
+}
+
+export function GlobeView() {
   const containerRef = useRef(null)
   const starsCanvasRef = useRef(null)
   const mapRef = useRef(null)
@@ -396,9 +463,15 @@ export function GlobeView({ onReportClick, onEventClick }) {
       })
 
       map.on('click', 'reports', (e) => {
+        e.preventDefault()
         const id = e.features[0].properties.id
         const report = reportsRef.current.find((r) => r.id === id)
-        if (report) onReportClick?.({ ...report, type: 'report' })
+        if (!report) return
+        const coords = e.features[0].geometry.coordinates.slice()
+        new maplibregl.Popup({ closeOnClick: true, maxWidth: '300px', className: 'reviv-popup', offset: 12 })
+          .setLngLat(coords)
+          .setHTML(buildReportPopupHTML(report))
+          .addTo(map)
       })
 
       // ── Cursor changes ─────────────────────────────────────────────────
@@ -529,7 +602,10 @@ export function GlobeView({ onReportClick, onEventClick }) {
         </svg>`
       el.addEventListener('click', (e) => {
         e.stopPropagation()
-        onEventClick?.({ ...event, type: 'event' })
+        new maplibregl.Popup({ closeOnClick: true, maxWidth: '300px', className: 'reviv-popup', offset: [0, -36] })
+          .setLngLat([coords.lng, coords.lat])
+          .setHTML(buildEventPopupHTML(event))
+          .addTo(map)
       })
 
       const marker = new maplibregl.Marker({ element: el, anchor: 'bottom' })
@@ -538,7 +614,7 @@ export function GlobeView({ onReportClick, onEventClick }) {
 
       eventMarkersRef.current.push(marker)
     })
-  }, [events, mapReady, onEventClick])
+  }, [events, mapReady])
 
   return (
     <div className="w-full h-full relative overflow-hidden" style={{ background: '#010308' }}>
