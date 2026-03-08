@@ -26,4 +26,5 @@ class Report(Document):
             pymongo.IndexModel([("location", pymongo.GEOSPHERE)]),
             pymongo.IndexModel([("status", pymongo.ASCENDING)]),
             pymongo.IndexModel([("submitted_by", pymongo.ASCENDING)]),
+            pymongo.IndexModel([("status", pymongo.ASCENDING), ("severity", pymongo.ASCENDING)]),
         ]

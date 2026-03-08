@@ -14,19 +14,22 @@ export function Sidebar({ open, onClose, onReport, onCreateEvent }) {
   const { data: profile } = useQuery({
     queryKey: ['user', user?.id],
     queryFn: () => getUser(user.id),
-    enabled: !!user?.id && open,
+    enabled: !!user?.id,
+    staleTime: 300000,
   })
 
   const { data: userEvents = [] } = useQuery({
     queryKey: ['user-events', user?.id],
     queryFn: () => getUserEvents(user.id),
-    enabled: !!user?.id && open,
+    enabled: !!user?.id,
+    staleTime: 300000,
   })
 
   const { data: userReports = [] } = useQuery({
     queryKey: ['user-reports', user?.id],
     queryFn: () => getUserReports(user.id),
-    enabled: !!user?.id && open,
+    enabled: !!user?.id,
+    staleTime: 300000,
   })
 
   const displayUser = profile || user

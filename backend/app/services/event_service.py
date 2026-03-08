@@ -135,14 +135,19 @@ async def get_events_near(
     return [event_to_response(e) for e in events]
 
 
+async def _fetch_attendees(ids):
+    if not ids:
+        return []
+    return await User.find({"_id": {"$in": ids}}).to_list()
+
+
 async def get_event_by_id(event_id: str) -> EventResponse:
     event = await Event.get(PydanticObjectId(event_id))
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    organizer = await User.get(event.organizer_id)
-    attendees = (
-        await User.find({"_id": {"$in": event.attendee_ids}}).to_list()
-        if event.attendee_ids else []
+    organizer, attendees = await asyncio.gather(
+        User.get(event.organizer_id),
+        _fetch_attendees(event.attendee_ids),
     )
     return event_to_response(event, organizer, attendees)
 
@@ -178,7 +183,10 @@ async def join_event(event_id: str, user: User, background_tasks: BackgroundTask
         if event.max_volunteers and len(event.attendee_ids) >= event.max_volunteers:
             event.status = "full"
 
-    await event.save()
+    _, organizer = await asyncio.gather(
+        event.save(),
+        User.get(event.organizer_id),
+    )
 
     # Notify organizer
     from app.services.notification_service import create_notification
@@ -190,7 +198,6 @@ async def join_event(event_id: str, user: User, background_tasks: BackgroundTask
         event.id,
     )
 
-    organizer = await User.get(event.organizer_id)
     return event_to_response(event, organizer)
 
 
@@ -227,8 +234,10 @@ async def leave_event(event_id: str, user: User, background_tasks: BackgroundTas
     else:
         raise HTTPException(status_code=400, detail="Not attending or waitlisted")
 
-    await event.save()
-    organizer = await User.get(event.organizer_id)
+    _, organizer = await asyncio.gather(
+        event.save(),
+        User.get(event.organizer_id),
+    )
     return event_to_response(event, organizer)
 
 
@@ -248,7 +257,11 @@ async def complete_event(event_id: str, user: User, photos: List[UploadFile], ba
     event.post_cleanup_photos.extend(photo_urls)
     event.status = "completed"
     event.completed_at = datetime.now(timezone.utc)
-    await event.save()
+
+    _, organizer = await asyncio.gather(
+        event.save(),
+        User.get(event.organizer_id),
+    )
 
     # Notify attendees
     from app.services.notification_service import create_notification
@@ -261,7 +274,6 @@ async def complete_event(event_id: str, user: User, photos: List[UploadFile], ba
             event.id,
         )
 
-    organizer = await User.get(event.organizer_id)
     return event_to_response(event, organizer)
 
 

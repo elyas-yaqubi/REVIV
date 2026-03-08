@@ -1,3 +1,4 @@
+import asyncio
 from typing import Optional, List
 from datetime import datetime, timezone
 
@@ -45,7 +46,7 @@ async def create_report(
     if photos and photos[0].filename:
         image_bytes = await photos[0].read()
         await photos[0].seek(0)
-        severity = classify_image(image_bytes)
+        severity = await asyncio.get_event_loop().run_in_executor(None, classify_image, image_bytes)
 
     photo_urls = []
     for photo in photos:
